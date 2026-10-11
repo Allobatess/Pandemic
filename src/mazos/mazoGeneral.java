@@ -1,0 +1,1 @@
+//Este contiene las cartas de ciudad, donde estan las cartas de cada ciudad, de epidemia, y eventos.
