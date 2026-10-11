@@ -1,5 +1,6 @@
-//estas son las cartas con las que se encuentran la cura
 package mundo.cartas;
+
+//estas son las cartas con las que se encuentran la cura
 
 import mundo.ciudad;
 
@@ -8,7 +9,7 @@ public class cartaCiudad extends carta {
     // lo que significa que cartaCiudad es una subclase de carta y puede acceder a sus métodos y atributos.
     //Pos se supone que esta cosa se hace para no volver a escribir ciudades xd
 
-    private ciudad ciudad_asociada; //Atributo 
+    private final ciudad ciudad_asociada; //Atributo 
     //ciudad_asociada es un atributo privado de la clase cartaCiudad que almacena una referencia a un objeto de tipo ciudad.
 
     public cartaCiudad(ciudad ciudad_asociada) { //Constructor

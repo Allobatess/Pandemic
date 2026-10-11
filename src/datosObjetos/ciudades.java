@@ -1,5 +1,5 @@
 //
-package datos;
+package datosObjetos;
 
 import mundo.ciudad;
 

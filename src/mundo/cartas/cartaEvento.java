@@ -2,7 +2,7 @@ package mundo.cartas;
 
 public class cartaEvento extends carta {
 
-    private String descripcion;
+    private final String descripcion;
     
 
     public cartaEvento(String nombre, String descripcion) {

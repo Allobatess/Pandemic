@@ -2,8 +2,8 @@ package mundo;
 
 public class ciudad {
 
-    private String nombre;
-    private String color;
+    private final String nombre;
+    private final String  color;
     private int cubos_de_infeccion;
     private boolean centro_de_investigacion;
 

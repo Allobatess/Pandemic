@@ -4,7 +4,7 @@ import mundo.ciudad;
 
 public class cartaInfeccion extends carta {
 
-    private ciudad ciudad_asociada;
+    private final ciudad ciudad_asociada;
 
     public cartaInfeccion(ciudad ciudad_asociada) {
         super(ciudad_asociada.ObtenerNombre(), "Infeccion");

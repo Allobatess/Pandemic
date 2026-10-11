@@ -2,8 +2,8 @@ package mundo.cartas;
 
 public class carta {
 
-    private String nombre;
-    private String tipo;
+    private final String nombre;
+    private final String tipo;
 
     public carta(String nombre, String tipo) {
         this.nombre = nombre;
