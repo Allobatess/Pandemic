@@ -1,4 +1,4 @@
-package cartas;
+package mundo.cartas;
 
 import mundo.ciudad;
 
@@ -8,7 +8,6 @@ public class cartaInfeccion extends carta {
 
     public cartaInfeccion(ciudad ciudad_asociada) {
         super(ciudad_asociada.ObtenerNombre(), "Infeccion");
-
         this.ciudad_asociada = ciudad_asociada;
     }
 

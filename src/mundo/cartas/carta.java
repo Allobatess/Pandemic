@@ -1,4 +1,4 @@
-package cartas;
+package mundo.cartas;
 
 public class carta {
 

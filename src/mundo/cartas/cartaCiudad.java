@@ -1,5 +1,5 @@
 //estas son las cartas con las que se encuentran la cura
-package cartas;
+package mundo.cartas;
 
 import mundo.ciudad;
 
@@ -15,11 +15,13 @@ public class cartaCiudad extends carta {
 //  acceso + constructor + parametros, para crear una nueva cartaCiudad, se necesitaun objeto de tipo ciudad que se pasa como argumento al constructor.
 
         super(ciudad_asociada.ObtenerNombre(), "Ciudad"); //constructor de la clase padre carta 
-        
+        //super, llama al constructor de la clase padre carta
         this.ciudad_asociada = ciudad_asociada;
+        //atributo del objeto cartaCiudad = parametro que llego al constructor
     }
 
-    public ciudad ObtenerCiudad() {
+    public ciudad ObtenerCiudad() { //metodo
+    //acceso + tipo de retorno + nombre del metodo, este metodo devuelve el objeto ciudad asociado a la cartaCiudad.
         return ciudad_asociada;
     }
 }

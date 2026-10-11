@@ -1,5 +1,8 @@
-package cartas;
+package mundo.cartas;
 
-public class cartaEpidemia {
-    
+public class CartaEpidemia extends carta {
+
+    public CartaEpidemia() {
+        super("Epidemia", "Epidemia");
+    }
 }
