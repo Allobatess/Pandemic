@@ -1,4 +1,4 @@
-Import mundo.ciudad;
+import mundo.ciudad;
 import mundo.cartas.cartaInfeccion;
 
 public class InfoCartasInfeccion {
