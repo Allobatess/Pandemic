@@ -1,8 +1,13 @@
 package mundo.cartas;
 
-public class CartaEpidemia extends carta {
+public class cartaEpidemia extends carta {
+    private final String descripcion;
 
-    public CartaEpidemia() {
+    public cartaEpidemia(String descripcion) {
         super("Epidemia", "Epidemia");
+        this.descripcion = descripcion;
+    }
+    public String ObtenerDescripcion() {
+        return descripcion;
     }
 }
