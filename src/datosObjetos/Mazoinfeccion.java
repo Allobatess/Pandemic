@@ -62,16 +62,4 @@ public class Mazoinfeccion {
             }
         }
     }
-
-    public void infectarAutomaticamente(int cantidadDeCartas) {
-        if (cantidadDeCartas < 0 || cantidadDeCartas > cartasRestantes()) {
-            throw new IllegalArgumentException(
-                    "La cantidad no es válida o no quedan suficientes cartas.");
-        }
-
-        for (int i = 0; i < cantidadDeCartas; i++) {
-            cartaInfeccion carta = robarCarta();
-            carta.ObtenerCiudad().Agregar_CuboDeInfeccion();
-        }
-    }
 }
