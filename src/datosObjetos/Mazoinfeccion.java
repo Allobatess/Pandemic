@@ -37,4 +37,41 @@ public class Mazoinfeccion {
     public int cartasRestantes() {
         return cartas.length - siguienteCarta;
     }
+
+    public void prepararInfeccionInicial() {
+        if (siguienteCarta != 0) {
+            throw new IllegalStateException(
+                    "La infección inicial solo se puede preparar una vez.");
+        }
+
+        for (int i = 0; i < 9; i++) {
+            cartaInfeccion carta = robarCarta();
+            ciudad ciudadInfectada = carta.ObtenerCiudad();
+
+            int cantidadCubos;
+            if (i < 3) {
+                cantidadCubos = 3;
+            } else if (i < 6) {
+                cantidadCubos = 2;
+            } else {
+                cantidadCubos = 1;
+            }
+
+            for (int j = 0; j < cantidadCubos; j++) {
+                ciudadInfectada.Agregar_CuboDeInfeccion();
+            }
+        }
+    }
+
+    public void infectarAutomaticamente(int cantidadDeCartas) {
+        if (cantidadDeCartas < 0 || cantidadDeCartas > cartasRestantes()) {
+            throw new IllegalArgumentException(
+                    "La cantidad no es válida o no quedan suficientes cartas.");
+        }
+
+        for (int i = 0; i < cantidadDeCartas; i++) {
+            cartaInfeccion carta = robarCarta();
+            carta.ObtenerCiudad().Agregar_CuboDeInfeccion();
+        }
+    }
 }
