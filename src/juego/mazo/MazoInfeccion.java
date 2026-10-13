@@ -1,58 +1,58 @@
 package juego.mazo;
 
+import datosObjetos.InfoCartasInfeccion;
+import estructurasDatos.FixedArrayStack;
+import estructurasDatos.SinglyLinkedListQueue;
 import mundo.Ciudad;
 import mundo.cartas.CartaInfeccion;
-import estructurasDatos.SinglyLinkedListQueue;
-import datosObjetos.InfoCartasInfeccion;
 
 /**
- * Administra el mazo principal de infección (Array Stack) y la pila de descartes 
- * utilizando la estructura de datos externa SinglyLinkedListQueue (FIFO).
+ * Administra el mazo principal de infección utilizando la pila de capacidad fija
+ * FixedArrayStack y una cola SinglyLinkedListQueue para el mazo de descarte.
  */
 public class MazoInfeccion {
 
-    private final CartaInfeccion[] mazoPrincipal;
-    private int tope; // Puntero para comportamiento Stack LIFO
-    private final SinglyLinkedListQueue<CartaInfeccion> colaDescarte; // Instancia de la estructura externa
+    private final FixedArrayStack<CartaInfeccion> mazoPrincipal;
+    private final SinglyLinkedListQueue<CartaInfeccion> colaDescarte;
 
     public MazoInfeccion(Ciudad[] ciudades) {
         CartaInfeccion[] creadas = InfoCartasInfeccion.crearCartas(ciudades);
-        this.mazoPrincipal = new CartaInfeccion[creadas.length];
-        for (int i = 0; i < creadas.length; i++) {
-            this.mazoPrincipal[i] = creadas[i];
+        
+        // 1. Barajar el arreglo inicial de cartas
+        barajarArreglo(creadas);
+
+        // 2. Cargar en la estructura FixedArrayStack
+        this.mazoPrincipal = new FixedArrayStack<>(creadas.length);
+        for (CartaInfeccion carta : creadas) {
+            this.mazoPrincipal.push(carta);
         }
-        this.tope = creadas.length - 1;
+
         this.colaDescarte = new SinglyLinkedListQueue<>();
-        mezclar();
     }
 
-    public void mezclar() {
-        for (int i = tope; i > 0; i--) {
+    private void barajarArreglo(CartaInfeccion[] arreglo) {
+        for (int i = arreglo.length - 1; i > 0; i--) {
             int aleatorio = (int) (Math.random() * (i + 1));
-            CartaInfeccion temp = mazoPrincipal[i];
-            mazoPrincipal[i] = mazoPrincipal[aleatorio];
-            mazoPrincipal[aleatorio] = temp;
+            CartaInfeccion temp = arreglo[i];
+            arreglo[i] = arreglo[aleatorio];
+            arreglo[aleatorio] = temp;
         }
     }
 
     public CartaInfeccion robarCarta() {
-        if (tope >= 0) {
-            CartaInfeccion robada = mazoPrincipal[tope];
-            mazoPrincipal[tope] = null;
-            tope--;
-            colaDescarte.enqueue(robada); // Encola en el descarte FIFO
+        if (!mazoPrincipal.isEmpty()) {
+            CartaInfeccion robada = mazoPrincipal.pop();
+            colaDescarte.enqueue(robada); // Encola automáticamente en el descarte de infecciones.
             return robada;
         }
         return null;
     }
 
-    //  extrae la carta más antigua del descarte (queue)
     public CartaInfeccion extraerCartaDescarteFIFO() {
         return colaDescarte.dequeue();
     }
 
     public void prepararInfeccionInicial() {
-        // Infecta 3 ciudades con 3 cubos, 3 ciudades con 2 cubos y 3 ciudades con 1 cubo
         for (int cantidadCubos = 3; cantidadCubos >= 1; cantidadCubos--) {
             for (int i = 0; i < 3; i++) {
                 CartaInfeccion robada = robarCarta();
@@ -67,6 +67,6 @@ public class MazoInfeccion {
     }
 
     public int cartasRestantes() {
-        return tope + 1;
+        return mazoPrincipal.obtenerTamano();
     }
 }

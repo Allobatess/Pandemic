@@ -1,6 +1,7 @@
 package juego.mazo;
 
 import datosObjetos.InfoCartas;
+import estructurasDatos.FixedArrayStack;
 import mundo.Ciudad;
 import mundo.Personaje;
 import mundo.cartas.Carta;
@@ -11,16 +12,15 @@ import mundo.cartas.CartaEvento;
 /**
  * Administra el mazo de jugador.
  * Gestiona el flujo de repartición inicial sin epidemias, el ensamblaje con epidemias
- * y la posterior conversión a una pila (Array Stack LIFO) para la dinámica del juego.
+ * y la posterior conversión a un FixedArrayStack para la dinámica del juego.
  */
+
 public class MazoJugador {
 
-    private Carta[] mazoStack;
-    private int tope;
+    private FixedArrayStack<Carta> mazoStack;
 
     public MazoJugador() {
         this.mazoStack = null;
-        this.tope = -1;
     }
 
     // Paso 1: Crear mazo inicial sin epidemias (48 de ciudad + 5 de evento = 53 cartas)
@@ -51,7 +51,7 @@ public class MazoJugador {
         }
     }
 
-    // Paso 3: Repartir cartas iniciales (3 cartas a cada uno de los 3 jugadores)
+    // Paso 3: Repartir cartas iniciales (3 cartas a cada jugador)
     public int repartirManosIniciales(Carta[] mazoSinEpidemias, Personaje[] jugadores) {
         int cartasRepartidas = 0;
         for (Personaje j : jugadores) {
@@ -60,10 +60,10 @@ public class MazoJugador {
                 cartasRepartidas++;
             }
         }
-        return cartasRepartidas; // Retorna el índice desde donde se tomará el remanente
+        return cartasRepartidas;
     }
 
-    // Pasos 4 y 5: Ensamblar remanente con epidemias, barajar y convertir a Stack
+    // Pasos 4 y 5: Ensamblar remanente con epidemias, barajar y cargar en FixedArrayStack
     public void ensamblarYConvertirAStack(Carta[] mazoSinEpidemias, int cartasYaUsadas, int numEpidemias) {
         int remanenteTamano = mazoSinEpidemias.length - cartasYaUsadas;
         CartaEpidemia[] epidemias = InfoCartas.crearCartasEpidemia(numEpidemias);
@@ -84,22 +84,21 @@ public class MazoJugador {
         // Barajar el remanente final
         barajarArreglo(remanenteConEpidemias);
 
-        // Convertir a Array Stack LIFO
-        this.mazoStack = remanenteConEpidemias;
-        this.tope = remanenteConEpidemias.length - 1;
+        // Guardar en la estructura FixedArrayStack
+        this.mazoStack = new FixedArrayStack<>(remanenteConEpidemias.length);
+        for (Carta c : remanenteConEpidemias) {
+            this.mazoStack.push(c);
+        }
     }
 
     public Carta robarCarta() {
-        if (tope >= 0) {
-            Carta robada = mazoStack[tope];
-            mazoStack[tope] = null;
-            tope--;
-            return robada;
+        if (mazoStack != null && !mazoStack.isEmpty()) {
+            return mazoStack.pop();
         }
         return null; // Mazo de jugador agotado
     }
 
     public int cartasRestantes() {
-        return tope + 1;
+        return (mazoStack != null) ? mazoStack.obtenerTamano() : 0;
     }
 }
