@@ -14,7 +14,7 @@ public class Ciudades {
         // Listado de las 48 ciudades clasificadas por su color (12 por color)
         String[] nombresAzul = {
             "San Francisco", "Chicago", "Montreal", "Nueva York", "Washington", "Atlanta",
-            "Londres", "Esterlina", "Esen", "Paris", "Milan", "Madrid"
+            "Londres", "San Petersburgo", "Essen", "Paris", "Milan", "Madrid"
         };
         String[] nombresAmarillo = {
             "Los Angeles", "Ciudad de Mexico", "Miami", "Bogota", "Lima", "Santiago",
@@ -22,11 +22,11 @@ public class Ciudades {
         };
         String[] nombresNegro = {
             "Argel", "El Cairo", "Estambul", "Moscú", "Bagdad", "Riad",
-            "Teheran", "Karachi", "Bombay", "Nueva Delhi", "Calcuta", "Mascate"
+            "Teheran", "Karachi", "Bombay", "Nueva Delhi", "Calcuta", "Chennai"
         };
         String[] nombresRojo = {
-            "Pekin", "Suel", "Tokio", "Shangai", "Hong Kong", "Taipéi", "Bangkok",
-            "Manila", "Ho Chi Minh", "Yakarta", "Sídney", "Osa"
+            "Pekin", "Seul", "Tokio", "Shangai", "Hong Kong", "Taipéi", "Bangkok",
+            "Manila", "Ho Chi Minh", "Yakarta", "Sídney", "Osaka"
         };
 
         int idx = 0;
