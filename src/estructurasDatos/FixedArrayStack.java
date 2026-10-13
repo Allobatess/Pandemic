@@ -1,7 +1,7 @@
 package estructurasDatos;
 
 /**
- * Estructura de datos Pila (Stack) de capacidad fija respaldada por un arreglo nativo.
+ * Estructura de datos Pila (Stack) de capacidad fija.
  * Sigue el principio LIFO (Last-In, First-Out).
  */
 public class FixedArrayStack<T> {
@@ -16,7 +16,6 @@ public class FixedArrayStack<T> {
             throw new IllegalArgumentException("La capacidad debe ser mayor a 0.");
         }
         this.capacity = capacity;
-        // En Java se instancia Object[] y se castea al tipo genérico T[]
         this.elementos = (T[]) new Object[capacity];
         this.top = -1;
     }
@@ -34,7 +33,7 @@ public class FixedArrayStack<T> {
             return null;
         }
         T elementoExtraido = elementos[top];
-        elementos[top] = null; // Liberar referencia para el Garbage Collector
+        elementos[top] = null; 
         top--;
         return elementoExtraido;
     }
