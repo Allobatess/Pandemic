@@ -1,26 +1,31 @@
-package juego;
+package datosObjetos;
 
-import datosObjetos.Mazoinfeccion;
-import mundo.cartas.cartaInfeccion;
+import mundo.Ciudad;
+import mundo.cartas.CartaInfeccion;
 
+/**
+ * Modulo que ejecuta la fase de infección automática al final de cada turno.
+ * Extrae cartas del mazo de infección y agrega un cubo a cada ciudad revelada (máximo 3 cubos).
+ */
 public class InfeccionAutomatica {
 
-    private final Mazoinfeccion mazoInfeccion;
+    private final MazoInfeccion mazoInfeccion;
 
-    public InfeccionAutomatica(Mazoinfeccion mazoInfeccion) {
+    public InfeccionAutomatica(MazoInfeccion mazoInfeccion) {
         this.mazoInfeccion = mazoInfeccion;
     }
 
     public void infectar(int cantidadDeCartas) {
-        if (cantidadDeCartas < 0
-                || cantidadDeCartas > mazoInfeccion.cartasRestantes()) {
-            throw new IllegalArgumentException(
-                    "La cantidad no es válida o no quedan suficientes cartas.");
-        }
-
+        System.out.println("\n--- Fase de Infección Automática (" + cantidadDeCartas + " cartas) ---");
         for (int i = 0; i < cantidadDeCartas; i++) {
-            cartaInfeccion carta = mazoInfeccion.robarCarta();
-            carta.ObtenerCiudad().Agregar_CuboDeInfeccion();
+            CartaInfeccion robada = mazoInfeccion.robarCarta();
+            if (robada != null) {
+                Ciudad c = robada.obtenerCiudad();
+                c.agregarCuboDeInfeccion();
+                System.out.println("Infección en: " + c.obtenerNombre() + " | Cubos actuales: " + c.obtenerCubosDeInfeccion());
+            } else {
+                System.out.println("Mazo de infección agotado.");
+            }
         }
     }
 }
