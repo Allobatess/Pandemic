@@ -48,14 +48,11 @@ public class Personaje {
     }
 
     // ==========================================
-    // GESTIÓN DE LA MANO INTERACTIVA
+    // GESTIÓN DE LA MANO 
     // ==========================================
 
     public void agarrarCarta(Carta nuevaCarta) {
         if (nuevaCarta == null) return;
-        if (nuevaCarta.obtenerTipo().equals("Epidemia")) {
-            return; // Se gestiona externamente mediante resolverEpidemia
-        }
         mano[numCartas] = nuevaCarta;
         numCartas++;
         

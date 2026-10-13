@@ -6,11 +6,17 @@ public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("==========================================");
-        System.out.println("   SIMULADOR INTERACTIVO DE PANDEMIC      ");
-        System.out.println("==========================================");
+        System.out.println("██████   █████  ███╗  ██╗██████  ███████╗███╗   ███╗██╗ ██████");
+        System.out.println("██   ██ ██   ██ ████╗ ██║██   ██ ██      ████╗ ████║██║██     ");
+        System.out.println("██████  ███████ ██╔██╗██║██   ██ █████   ██╔████╔██║██║██     ");
+        System.out.println("██      ██   ██ ██║╚████║██   ██ ██      ██║╚██╔╝██║██║██     ");
+        System.out.println("██      ██   ██ ██║ ╚███║██████  ███████╗██║ ╚═╝ ██║██║ ██████");
+        System.out.println();
 
         LogicaJuego juego = new LogicaJuego();
+        juego.imprimirEstadoMapa();
+        
+
         boolean juegoActivo = true;
         int numeroTurno = 1;
 

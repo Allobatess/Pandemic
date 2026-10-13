@@ -1,8 +1,7 @@
 package juego;
 
 import datosObjetos.Ciudades;
-import datosObjetos.InfeccionAutomatica;
-import datosObjetos.MazoInfeccion;
+import juego.mazo.MazoInfeccion;
 import juego.mazo.MazoJugador;
 import mundo.Ciudad;
 import mundo.Personaje;
@@ -22,7 +21,7 @@ public class LogicaJuego {
 
     private final MazoInfeccion mazoInfeccion;
     private final MazoJugador mazoJugador;
-    private final InfeccionAutomatica infeccionAutomatica;
+
 
     private int tasaInfeccion;
     private final Ciudad atlanta;
@@ -45,10 +44,9 @@ public class LogicaJuego {
 
         // 3. Inicializar Mazo de Infección y ejecutar preparación inicial (18 cubos)
         this.mazoInfeccion = new MazoInfeccion(tableroCiudades);
-        this.infeccionAutomatica = new InfeccionAutomatica(mazoInfeccion);
         this.mazoInfeccion.prepararInfeccionInicial();
 
-        // 4. Configurar Mazo de Jugador siguiendo el flujo de 5 pasos
+        // 4. Configurar Mazo de Jugador creando mazo inicial sin epidemias con tal de poder hacer la repartición inicial
         this.mazoJugador = new MazoJugador();
         Carta[] mazoInicial = mazoJugador.crearMazoInicialSinEpidemias(tableroCiudades);
         mazoJugador.barajarArreglo(mazoInicial);
@@ -90,6 +88,19 @@ public class LogicaJuego {
     // DINÁMICA DEL TURNO Y RESOLUCIÓN DE EPIDEMIA
     // ==========================================
 
+    public void ejecutarInfeccionAutomatica() {
+    System.out.println("\n--- FASE DE INFECCIÓN AUTOMÁTICA ---");
+    for (int i = 0; i < this.tasaInfeccion; i++) {
+        CartaInfeccion robada = this.mazoInfeccion.robarCarta();
+        if (robada != null) {
+            Ciudad ciudadAInfectar = robada.obtenerCiudad();
+            ciudadAInfectar.agregarCuboDeInfeccion();
+            System.out.println("¡Infección! " + ciudadAInfectar.obtenerNombre() 
+                    + " ahora tiene " + ciudadAInfectar.obtenerCubosDeInfeccion() + " cubo(s).");
+        }
+    }
+    }
+
     public boolean dinamicaTurno() {
         Personaje jugadorActual = jugadores[indiceJugadorActual];
         System.out.println("\n==========================================");
@@ -120,11 +131,40 @@ public class LogicaJuego {
         }
 
         // Fase 3: Infección automática basada en la tasa de infección actual
-        infeccionAutomatica.infectar(tasaInfeccion);
+        ejecutarInfeccionAutomatica();
+        
+        java.util.Scanner scanner = new java.util.Scanner(System.in);
+        // Fase 4: Consulta opcional del mapa
+            System.out.print("\n¿Desea consultar el estado del mapa actual? (s/n): ");
+            
+            String respuestaMapa = scanner.nextLine().trim();
 
-        // Fase 4: Avanzar al siguiente jugador en el Circular Array
+            if (respuestaMapa.equalsIgnoreCase("s")) {
+                imprimirEstadoMapa();
+            }
+
+        // Fase 5: Avanzar al siguiente jugador en el Circular Array
         indiceJugadorActual = (indiceJugadorActual + 1) % jugadores.length;
         return true; // El juego continúa
+        }
+
+    public void imprimirEstadoMapa() {
+        System.out.println("\n==========================================");
+        System.out.println("              MAPA ACTUAL                 ");
+        System.out.println("==========================================");
+
+        for (Ciudad ciudad : this.tableroCiudades) {
+            int cubos = ciudad.obtenerCubosDeInfeccion();
+            
+            // Destacar si la ciudad está infectada
+            if (cubos > 0) {
+                System.out.println("!!! " + ciudad.obtenerNombre() 
+                        + " (Cubos de infección: " + cubos + ") !!!");
+            } else {
+                System.out.println(ciudad.obtenerNombre() 
+                        + " (Cubos de infección: " + cubos + ")");
+            }
+        }
     }
 
     public void resolverEpidemia() {
@@ -141,7 +181,7 @@ public class LogicaJuego {
             for (int i = 0; i < 3; i++) {
                 ciudadEpidemia.agregarCuboDeInfeccion();
             }
-            System.out.println("2. Ciudad infectada desde el descarte FIFO: " 
+            System.out.println("2. Ciudad infectada desde mazo de descarte de infección: " 
                     + ciudadEpidemia.obtenerNombre() + " (3 cubos asignados).");
         } else {
             System.out.println("2. La pila de descartes de infección estaba vacía.");
