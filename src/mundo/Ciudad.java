@@ -47,10 +47,18 @@ public class Ciudad {
         return centroDeInvestigacion;
     }
 
-    public void agregarCuboDeInfeccion() {
+    /**
+     * Agrega un cubo de infección a la ciudad.
+     *
+     * @return true si la ciudad ya tenía 3 cubos (en ese caso NO se agrega el cubo
+     *         y se debe producir un BROTE); false si el cubo se agregó normalmente.
+     */
+    public boolean agregarCuboDeInfeccion() {
         if (cubosDeInfeccion < 3) {
             cubosDeInfeccion++;
+            return false;
         }
+        return true; // Ya tenía 3 cubos: ¡brote!
     }
 
     public void quitarCuboDeInfeccion() {

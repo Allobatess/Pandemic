@@ -1,6 +1,7 @@
 package juego;
 
 import datosObjetos.Ciudades;
+import estructurasDatos.SinglyLinkedListQueue;
 import juego.mazo.MazoInfeccion;
 import juego.mazo.MazoJugador;
 import mundo.Ciudad;
@@ -25,6 +26,10 @@ public class LogicaJuego {
 
     private int tasaInfeccion;
     private final Ciudad atlanta;
+
+    // Brotes: con MAX_BROTES brotes los jugadores pierden
+    private static final int MAX_BROTES = 8;
+    private int contadorBrotes;
 
     public LogicaJuego() {
         // 1. Instanciar el tablero de 48 ciudades con sus conexiones y poblaciones
@@ -59,6 +64,9 @@ public class LogicaJuego {
 
         // 5. Configurar tasa de infección inicial en 2
         this.tasaInfeccion = 2;
+
+        // 6. Contador de brotes en 0
+        this.contadorBrotes = 0;
     }
 
     // ==========================================
@@ -93,12 +101,90 @@ public class LogicaJuego {
     for (int i = 0; i < this.tasaInfeccion; i++) {
         CartaInfeccion robada = this.mazoInfeccion.robarCarta();
         if (robada != null) {
-            Ciudad ciudadAInfectar = robada.obtenerCiudad();
-            ciudadAInfectar.agregarCuboDeInfeccion();
-            System.out.println("¡Infección! " + ciudadAInfectar.obtenerNombre() 
-                    + " ahora tiene " + ciudadAInfectar.obtenerCubosDeInfeccion() + " cubo(s).");
+            infectarCiudad(robada.obtenerCiudad(), 1);
+            if (hayDerrotaPorBrotes()) {
+                return; // No tiene sentido seguir infectando: ya se perdió
+            }
         }
     }
+    }
+
+    // ==========================================
+    // INFECCIÓN Y BROTES
+    // ==========================================
+
+    /**
+     * Agrega 'cantidad' cubos a la ciudad. Si la ciudad llega a tener 3 cubos y
+     * todavía le faltan cubos por recibir, se produce un brote (una sola vez).
+     */
+    public void infectarCiudad(Ciudad ciudad, int cantidad) {
+        for (int i = 0; i < cantidad; i++) {
+            boolean hayBrote = ciudad.agregarCuboDeInfeccion();
+            if (hayBrote) {
+                resolverBrotes(ciudad);
+                return;
+            }
+        }
+        System.out.println("¡Infección! " + ciudad.obtenerNombre()
+                + " ahora tiene " + ciudad.obtenerCubosDeInfeccion() + " cubo(s).");
+    }
+
+    /**
+     * Resuelve un brote y todas las reacciones en cadena que provoque.
+     * Recorre el grafo de ciudades en anchura (BFS) usando una cola:
+     * cada ciudad que explota infecta a todas sus vecinas, y las vecinas que ya
+     * tenían 3 cubos entran a la cola para explotar después.
+     * Cada ciudad explota como máximo una vez por cadena.
+     */
+    private void resolverBrotes(Ciudad ciudadInicial) {
+        SinglyLinkedListQueue<Ciudad> colaBrotes = new SinglyLinkedListQueue<>();
+        Ciudad[] yaExplotaron = new Ciudad[tableroCiudades.length];
+        int numExplotadas = 0;
+
+        colaBrotes.enqueue(ciudadInicial);
+        yaExplotaron[numExplotadas++] = ciudadInicial;
+
+        while (!colaBrotes.estaVacia()) {
+            Ciudad ciudad = colaBrotes.dequeue();
+            contadorBrotes++;
+            System.out.println("\n*** ¡BROTE en " + ciudad.obtenerNombre() + "! ***"
+                    + " (Brotes: " + contadorBrotes + "/" + MAX_BROTES + ")");
+
+            for (Ciudad vecina : ciudad.obtenerVecinos()) {
+                // Una ciudad que ya explotó en esta cadena no vuelve a recibir cubos
+                if (contiene(yaExplotaron, numExplotadas, vecina)) {
+                    continue;
+                }
+
+                boolean vecinaExplota = vecina.agregarCuboDeInfeccion();
+                if (vecinaExplota) {
+                    System.out.println("   " + vecina.obtenerNombre()
+                            + " ya tenía 3 cubos: ¡reacción en cadena!");
+                    colaBrotes.enqueue(vecina);
+                    yaExplotaron[numExplotadas++] = vecina;
+                } else {
+                    System.out.println("   " + vecina.obtenerNombre() + " recibe 1 cubo (ahora tiene "
+                            + vecina.obtenerCubosDeInfeccion() + ").");
+                }
+            }
+        }
+    }
+
+    private boolean contiene(Ciudad[] ciudades, int cantidad, Ciudad buscada) {
+        for (int i = 0; i < cantidad; i++) {
+            if (ciudades[i] == buscada) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hayDerrotaPorBrotes() {
+        return contadorBrotes >= MAX_BROTES;
+    }
+
+    public int obtenerContadorBrotes() {
+        return contadorBrotes;
     }
 
     public boolean dinamicaTurno() {
@@ -118,6 +204,10 @@ public class LogicaJuego {
                 System.out.println("Carta robada: " + robada.obtenerNombre() + " [" + robada.obtenerTipo() + "]");
                 if (robada.obtenerTipo().equals("Epidemia")) {
                     resolverEpidemia();
+                    if (hayDerrotaPorBrotes()) {
+                        anunciarDerrotaPorBrotes();
+                        return false;
+                    }
                 } else {
                     jugadorActual.agarrarCarta(robada);
                 }
@@ -132,6 +222,10 @@ public class LogicaJuego {
 
         // Fase 3: Infección automática basada en la tasa de infección actual
         ejecutarInfeccionAutomatica();
+        if (hayDerrotaPorBrotes()) {
+            anunciarDerrotaPorBrotes();
+            return false;
+        }
         
         java.util.Scanner scanner = new java.util.Scanner(System.in);
         // Fase 4: Consulta opcional del mapa
@@ -148,9 +242,17 @@ public class LogicaJuego {
         return true; // El juego continúa
         }
 
+    private void anunciarDerrotaPorBrotes() {
+        System.out.println("\n==========================================");
+        System.out.println("¡¡¡ DERROTA !!! SE ALCANZARON " + MAX_BROTES + " BROTES.");
+        System.out.println("==========================================");
+    }
+
     public void imprimirEstadoMapa() {
         System.out.println("\n==========================================");
         System.out.println("              MAPA ACTUAL                 ");
+        System.out.println("Brotes: " + contadorBrotes + "/" + MAX_BROTES
+                + " | Tasa de infección: " + tasaInfeccion);
         System.out.println("==========================================");
 
         for (Ciudad ciudad : this.tableroCiudades) {
@@ -178,11 +280,9 @@ public class LogicaJuego {
         CartaInfeccion robadaDescarte = mazoInfeccion.extraerCartaDescarteFIFO();
         if (robadaDescarte != null) {
             Ciudad ciudadEpidemia = robadaDescarte.obtenerCiudad();
-            for (int i = 0; i < 3; i++) {
-                ciudadEpidemia.agregarCuboDeInfeccion();
-            }
-            System.out.println("2. Ciudad infectada desde mazo de descarte de infección: " 
-                    + ciudadEpidemia.obtenerNombre() + " (3 cubos asignados).");
+            System.out.println("2. Ciudad infectada desde mazo de descarte de infección: "
+                    + ciudadEpidemia.obtenerNombre() + " (3 cubos).");
+            infectarCiudad(ciudadEpidemia, 3); // Si ya tenía cubos, produce un brote
         } else {
             System.out.println("2. La pila de descartes de infección estaba vacía.");
         }
