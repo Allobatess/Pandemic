@@ -27,7 +27,7 @@ public class LogicaJuego {
     private int tasaInfeccion;
     private final Ciudad atlanta;
 
-    // Brotes: con MAX_BROTES brotes los jugadores pierden
+    // Marcador de brotes: avanza una casilla por brote. Con MAX_BROTES los jugadores pierden.
     private static final int MAX_BROTES = 8;
     private int contadorBrotes;
 
@@ -147,8 +147,8 @@ public class LogicaJuego {
         while (!colaBrotes.estaVacia()) {
             Ciudad ciudad = colaBrotes.dequeue();
             contadorBrotes++;
-            System.out.println("\n*** ¡BROTE en " + ciudad.obtenerNombre() + "! ***"
-                    + " (Brotes: " + contadorBrotes + "/" + MAX_BROTES + ")");
+            System.out.println("\n*** ¡BROTE en " + ciudad.obtenerNombre() + "! ***");
+            imprimirMarcadorBrotes();
 
             for (Ciudad vecina : ciudad.obtenerVecinos()) {
                 // Una ciudad que ya explotó en esta cadena no vuelve a recibir cubos
@@ -187,11 +187,37 @@ public class LogicaJuego {
         return contadorBrotes;
     }
 
+    public int obtenerMaximoBrotes() {
+        return MAX_BROTES;
+    }
+
+    /**
+     * Muestra el marcador de brotes. La casilla actual va entre corchetes.
+     * Ejemplo con 2 brotes:
+     *   Marcador de brotes:  0  1 [2] 3  4  5  6  7  8  (8 = derrota)
+     */
+    public void imprimirMarcadorBrotes() {
+        StringBuilder marcador = new StringBuilder("Marcador de brotes:  ");
+        int casillaActual = Math.min(contadorBrotes, MAX_BROTES);
+
+        for (int i = 0; i <= MAX_BROTES; i++) {
+            if (i == casillaActual) {
+                marcador.append("[").append(i).append("]");
+            } else {
+                marcador.append(" ").append(i).append(" ");
+            }
+        }
+        marcador.append(" (").append(MAX_BROTES).append(" = derrota)");
+
+        System.out.println(marcador);
+    }
+
     public boolean dinamicaTurno() {
         Personaje jugadorActual = jugadores[indiceJugadorActual];
         System.out.println("\n==========================================");
         System.out.println("TURNO DE: " + jugadorActual.obtenerNombre());
         System.out.println("==========================================");
+        imprimirMarcadorBrotes();
 
         // Fase 1: Ejecutar 4 acciones interactivas del personaje
         jugadorActual.ejecutarAccion(this);
@@ -251,8 +277,8 @@ public class LogicaJuego {
     public void imprimirEstadoMapa() {
         System.out.println("\n==========================================");
         System.out.println("              MAPA ACTUAL                 ");
-        System.out.println("Brotes: " + contadorBrotes + "/" + MAX_BROTES
-                + " | Tasa de infección: " + tasaInfeccion);
+        System.out.println("Tasa de infección: " + tasaInfeccion);
+        imprimirMarcadorBrotes();
         System.out.println("==========================================");
 
         for (Ciudad ciudad : this.tableroCiudades) {
