@@ -1,36 +1,29 @@
 package mundo;
 
-/**
- * Representa una entidad de ciudad en el tablero de juego.
- * Gestiona sus conexiones (vecinos), cubos de infección y jugadores presentes.
- */
 public class Ciudad {
 
     private final String nombre;
     private final String color;
     private int cubosDeInfeccion;
-    private boolean centroDeInvestigacion;
+    private boolean tieneCentroDeInvestigacion;
 
-    // Relaciones del mapa y control de personajes
-    private Ciudad[] vecinos;
+    private final Ciudad[] vecinos;
     private int numVecinos;
-    private Personaje[] jugadoresEnCiudad;
-    private int numJugadores;
+
+    private final Personaje[] personajes;
+    private int numPersonajes;
 
     public Ciudad(String nombre, String color) {
         this.nombre = nombre;
         this.color = color;
         this.cubosDeInfeccion = 0;
-        this.centroDeInvestigacion = false;
-
-        // Capacidad inicial para conexiones y jugadores en la ciudad
-        this.vecinos = new Ciudad[6];
+        this.tieneCentroDeInvestigacion = false;
+        this.vecinos = new Ciudad[10];
         this.numVecinos = 0;
-        this.jugadoresEnCiudad = new Personaje[3];
-        this.numJugadores = 0;
+        this.personajes = new Personaje[7];
+        this.numPersonajes = 0;
     }
 
-    // Getters y modificadores básicos
     public String obtenerNombre() {
         return nombre;
     }
@@ -43,22 +36,15 @@ public class Ciudad {
         return cubosDeInfeccion;
     }
 
-    public boolean tenerCentroDeInvestigacion() {
-        return centroDeInvestigacion;
-    }
-
     /**
-     * Agrega un cubo de infección a la ciudad.
-     *
-     * @return true si la ciudad ya tenía 3 cubos (en ese caso NO se agrega el cubo
-     *         y se debe producir un BROTE); false si el cubo se agregó normalmente.
+     * Agrega 1 cubo de infección. Si ya tiene 3, retorna true para detonar un brote.
      */
     public boolean agregarCuboDeInfeccion() {
         if (cubosDeInfeccion < 3) {
             cubosDeInfeccion++;
             return false;
         }
-        return true; // Ya tenía 3 cubos: ¡brote!
+        return true;
     }
 
     public void quitarCuboDeInfeccion() {
@@ -67,25 +53,29 @@ public class Ciudad {
         }
     }
 
+    public boolean tenerCentroDeInvestigacion() {
+        return tieneCentroDeInvestigacion;
+    }
+
     public void construirCentroDeInvestigacion() {
-        centroDeInvestigacion = true;
+        this.tieneCentroDeInvestigacion = true;
     }
 
-    // Gestión de vecinos (Grafo de adyacencia)
+    public void removerCentroDeInvestigacion() {
+        this.tieneCentroDeInvestigacion = false;
+    }
+
     public void agregarVecino(Ciudad vecino) {
-        if (numVecinos < vecinos.length) {
-            vecinos[numVecinos] = vecino;
-            numVecinos++;
+        if (vecino != null && !esVecino(vecino) && numVecinos < vecinos.length) {
+            vecinos[numVecinos++] = vecino;
         }
     }
 
-    public boolean esVecino(Ciudad otraCiudad) {
-        for (int i = 0; i < numVecinos; i++) {
-            if (vecinos[i].obtenerNombre().equals(otraCiudad.obtenerNombre())) {
-                return true;
-            }
+    public void establecerVecinos(Ciudad[] listaVecinos) {
+        if (listaVecinos == null) return;
+        for (Ciudad v : listaVecinos) {
+            agregarVecino(v);
         }
-        return false;
     }
 
     public Ciudad[] obtenerVecinos() {
@@ -96,33 +86,39 @@ public class Ciudad {
         return resultado;
     }
 
-    // Registro de presencia de personajes
+    public boolean esVecino(Ciudad ciudad) {
+        if (ciudad == null) return false;
+        for (int i = 0; i < numVecinos; i++) {
+            if (vecinos[i] == ciudad) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void agregarPersonaje(Personaje personaje) {
-        if (numJugadores < jugadoresEnCiudad.length) {
-            jugadoresEnCiudad[numJugadores] = personaje;
-            numJugadores++;
+        if (personaje != null && numPersonajes < personajes.length) {
+            personajes[numPersonajes++] = personaje;
         }
     }
 
     public void removerPersonaje(Personaje personaje) {
-        int indice = -1;
-        for (int i = 0; i < numJugadores; i++) {
-            if (jugadoresEnCiudad[i] == personaje) {
-                indice = i;
-                break;
+        for (int i = 0; i < numPersonajes; i++) {
+            if (personajes[i] == personaje) {
+                for (int j = i; j < numPersonajes - 1; j++) {
+                    personajes[j] = personajes[j + 1];
+                }
+                personajes[--numPersonajes] = null;
+                return;
             }
-        }
-        if (indice != -1) {
-            for (int i = indice; i < numJugadores - 1; i++) {
-                jugadoresEnCiudad[i] = jugadoresEnCiudad[i + 1];
-            }
-            jugadoresEnCiudad[numJugadores - 1] = null;
-            numJugadores--;
         }
     }
 
-    public void imprimirCiudad() {
-        System.out.println("Ciudad: " + nombre + " | Color: " + color 
-                + " | Cubos: " + cubosDeInfeccion + " | Centro: " + centroDeInvestigacion);
+    public Personaje[] obtenerPersonajes() {
+        Personaje[] resultado = new Personaje[numPersonajes];
+        for (int i = 0; i < numPersonajes; i++) {
+            resultado[i] = personajes[i];
+        }
+        return resultado;
     }
 }
