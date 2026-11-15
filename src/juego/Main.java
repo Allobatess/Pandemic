@@ -13,9 +13,23 @@ public class Main {
         System.out.println("██      ██   ██ ██║ ╚███║██████  ███████╗██║ ╚═╝ ██║██║ ██████");
         System.out.println();
 
-        LogicaJuego juego = new LogicaJuego();
+        int cantidadJugadores = 0;
+        while (cantidadJugadores < 2 || cantidadJugadores > 7) {
+            System.out.print("Ingrese la cantidad de jugadores para la partida (2 a 7): ");
+            if (scanner.hasNextInt()) {
+                cantidadJugadores = scanner.nextInt();
+                scanner.nextLine();
+                if (cantidadJugadores < 2 || cantidadJugadores > 7) {
+                    System.out.println("Número fuera de rango. Debe ser entre 2 y 7.");
+                }
+            } else {
+                scanner.nextLine();
+                System.out.println("Entrada inválida. Ingrese un número entero.");
+            }
+        }
+
+        LogicaJuego juego = new LogicaJuego(cantidadJugadores);
         juego.imprimirEstadoMapa();
-        
 
         boolean juegoActivo = true;
         int numeroTurno = 1;
@@ -25,12 +39,13 @@ public class Main {
             System.out.println("          INICIO DEL TURNO #" + numeroTurno);
             System.out.println("******************************************");
 
-            // dinamicaTurno() retorna false cuando el mazo de jugador se agota (Derrota)
             boolean juegoContinua = juego.dinamicaTurno();
 
             if (!juegoContinua) {
                 juegoActivo = false;
-                System.out.println("\nFin de la partida: Los jugadores han sido derrotados.");
+                if (!juego.hayVictoria()) {
+                    System.out.println("\nFin de la partida: Los jugadores han sido derrotados.");
+                }
                 break;
             }
 
