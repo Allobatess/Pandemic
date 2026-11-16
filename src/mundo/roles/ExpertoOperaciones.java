@@ -10,32 +10,22 @@ import java.util.Scanner;
 public class ExpertoOperaciones extends Rol {
 
     public ExpertoOperaciones() {
-        super(
-            "Experto en Operaciones",
-            "Como acción, puede construir un centro de investigación en su ciudad actual sin descartar carta, y moverse desde un centro a cualquier ciudad descartando cualquier carta de ciudad."
-        );
+        super("Experto en Operaciones",
+                "Puede construir centros de investigación sin descartar carta y moverse desde un centro a cualquier ciudad descartando cualquier carta de ciudad.");
     }
 
     @Override
-    public int ejecutarMenu(Personaje personaje, LogicaJuego juego) {
-        Scanner scanner = personaje.obtenerScanner();
+    protected void imprimirOpcionesBase() {
+        super.imprimirOpcionesBase();
+        System.out.println("  10. Vuelo desde centro de investigación descartando cualquier carta (habilidad de rol)");
+    }
 
-        imprimirOpcionesBase();
-        System.out.println("  9. [Habilidad] Volar desde centro de investigación a cualquier ciudad (stationToAnyDirectMove)");
-        System.out.println("  0. Pasar / Finalizar acciones restantes");
-        System.out.print("Opción: ");
-
-        int opcion = leerEntero(scanner);
-        if (opcion == Integer.MIN_VALUE) {
-            System.out.println("Entrada inválida. Ingrese un número válido.");
-            return 0;
+    @Override
+    protected int procesarOpcionBase(int opcion, Personaje personaje, LogicaJuego juego) {
+        if (opcion == 10) {
+            return ejecutarVueloDesdeCentro(personaje, juego) ? 1 : 0;
         }
-
-        if (opcion == 9) {
-            return ejecutarStationToAnyDirectMove(personaje, juego) ? 1 : 0;
-        }
-
-        return procesarOpcionBase(opcion, personaje, juego);
+        return super.procesarOpcionBase(opcion, personaje, juego);
     }
 
     @Override
@@ -49,67 +39,41 @@ public class ExpertoOperaciones extends Rol {
 
         if (juego.puedeConstruirCentro()) {
             juego.registrarCentroDeInvestigacion(ciudadActual);
-            System.out.println("¡Habilidad de Experto en Operaciones! Centro de investigación construido en "
-                    + ciudadActual.obtenerNombre() + " sin descartar carta ("
-                    + juego.obtenerCentrosConstruidos() + "/6).");
+            System.out.println("¡Éxito! Se ha construido un centro de investigación en "
+                    + ciudadActual.obtenerNombre() + " (" + juego.obtenerCentrosConstruidos() + "/6).");
             return true;
         } else {
-            Ciudad origen = seleccionarCentroAReposicionar(personaje, juego);
+            Ciudad origen = seleccionarCentroAReposicionar(personaje, ciudadActual, juego);
             if (origen == null) {
                 return false;
             }
             juego.moverCentroDeInvestigacion(origen, ciudadActual);
-            System.out.println("¡Habilidad de Experto en Operaciones! Centro reposicionado de "
-                    + origen.obtenerNombre() + " a " + ciudadActual.obtenerNombre() + " sin descartar carta (6/6).");
+            System.out.println("¡Éxito! Centro de investigación reposicionado de "
+                    + origen.obtenerNombre() + " a " + ciudadActual.obtenerNombre() + " (6/6).");
             return true;
         }
     }
 
-    public boolean stationToAnyDirectMove(Personaje personaje, int indiceCartaCiudad, Ciudad ciudadDestino, LogicaJuego juego) {
+    private boolean ejecutarVueloDesdeCentro(Personaje personaje, LogicaJuego juego) {
         Ciudad ciudadActual = personaje.obtenerCiudadActual();
-
         if (!ciudadActual.tenerCentroDeInvestigacion()) {
             System.out.println("Debes estar en una ciudad con centro de investigación para usar esta habilidad.");
             return false;
         }
 
-        if (ciudadDestino == null || ciudadDestino == ciudadActual) {
-            System.out.println("Ciudad destino inválida.");
-            return false;
-        }
-
-        if (indiceCartaCiudad < 0 || indiceCartaCiudad >= personaje.obtenerNumCartas()) {
-            System.out.println("Índice de carta inválido.");
-            return false;
-        }
-
-        Carta carta = personaje.obtenerMano()[indiceCartaCiudad];
-        if (!(carta instanceof CartaCiudad)) {
-            System.out.println("Debes seleccionar una Carta de Ciudad para descartar.");
-            return false;
-        }
-
-        personaje.removerCartaPorIndice(indiceCartaCiudad);
-        juego.cambiarUbicacion(personaje, ciudadDestino);
-        return true;
-    }
-
-    private boolean ejecutarStationToAnyDirectMove(Personaje personaje, LogicaJuego juego) {
-        if (!personaje.obtenerCiudadActual().tenerCentroDeInvestigacion()) {
-            System.out.println("Debes encontrarte en un centro de investigación para usar esta habilidad.");
-            return false;
-        }
-
         if (personaje.obtenerNumCartas() == 0) {
-            System.out.println("No tienes cartas en la mano.");
+            System.out.println("No tienes cartas en la mano para descartar.");
             return false;
         }
 
         Scanner scanner = personaje.obtenerScanner();
-        System.out.print("Ingrese el índice de cualquier Carta Ciudad de su mano a descartar: ");
+        System.out.print("Ingrese el índice de la Carta Ciudad a descartar: ");
         int idxCarta = leerEntero(scanner);
-        if (idxCarta == Integer.MIN_VALUE) {
-            System.out.println("Índice inválido.");
+
+        Carta[] mano = personaje.obtenerMano();
+        if (idxCarta < 0 || idxCarta >= personaje.obtenerNumCartas()
+                || !(mano[idxCarta] instanceof CartaCiudad)) {
+            System.out.println("Debes seleccionar una Carta Ciudad válida.");
             return false;
         }
 
@@ -122,6 +86,13 @@ public class ExpertoOperaciones extends Rol {
             return false;
         }
 
-        return stationToAnyDirectMove(personaje, idxCarta, destino, juego);
+        if (destino == ciudadActual) {
+            System.out.println("Ya te encuentras en " + destino.obtenerNombre() + ".");
+            return false;
+        }
+
+        personaje.removerCartaPorIndice(idxCarta);
+        juego.cambiarUbicacion(personaje, destino);
+        return true;
     }
 }

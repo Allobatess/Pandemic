@@ -9,96 +9,99 @@ import mundo.cartas.CartaCiudad;
 import mundo.cartas.CartaEpidemia;
 import mundo.cartas.CartaEvento;
 
-/**
- * Administra el mazo de jugador.
- * Gestiona el flujo de repartición inicial sin epidemias, el ensamblaje con epidemias
- * y la posterior conversión a un FixedArrayStack para la dinámica del juego.
- */
-
 public class MazoJugador {
 
-    private FixedArrayStack<Carta> mazoStack;
+    private FixedArrayStack<Carta> mazo;
 
     public MazoJugador() {
-        this.mazoStack = null;
+        this.mazo = new FixedArrayStack<>(100);
     }
 
-    // Paso 1: Crear mazo inicial sin epidemias (48 de ciudad + 5 de evento = 53 cartas)
-    public Carta[] crearMazoInicialSinEpidemias(Ciudad[] ciudadesTablero) {
-        CartaCiudad[] cartasCiudad = InfoCartas.crearCartasCiudad(ciudadesTablero);
-        CartaEvento[] cartasEvento = InfoCartas.crearCartasEvento();
-
-        Carta[] mazoInicial = new Carta[cartasCiudad.length + cartasEvento.length];
+    public Carta[] crearMazoInicialSinEpidemias(Ciudad[] ciudades) {
+        CartaEvento[] eventos = InfoCartas.crearCartasEvento();
+        Carta[] mazoInicial = new Carta[ciudades.length + eventos.length];
         int idx = 0;
 
-        for (CartaCiudad c : cartasCiudad) {
-            mazoInicial[idx++] = c;
+        for (Ciudad c : ciudades) {
+            mazoInicial[idx++] = new CartaCiudad(c);
         }
-        for (CartaEvento e : cartasEvento) {
+        for (CartaEvento e : eventos) {
             mazoInicial[idx++] = e;
         }
-
         return mazoInicial;
     }
 
-    // Paso 2: Barajar mazo en formato arreglo (Fisher-Yates)
-    public void barajarArreglo(Carta[] mazo) {
-        for (int i = mazo.length - 1; i > 0; i--) {
-            int aleatorio = (int) (Math.random() * (i + 1));
-            Carta temp = mazo[i];
-            mazo[i] = mazo[aleatorio];
-            mazo[aleatorio] = temp;
+    public void barajarArreglo(Carta[] cartas) {
+        for (int i = cartas.length - 1; i > 0; i--) {
+            int j = (int) (Math.random() * (i + 1));
+            Carta temp = cartas[i];
+            cartas[i] = cartas[j];
+            cartas[j] = temp;
         }
     }
 
-    // Paso 3: Repartir cartas iniciales (3 cartas a cada jugador)
-    public int repartirManosIniciales(Carta[] mazoSinEpidemias, Personaje[] jugadores) {
-        int cartasRepartidas = 0;
-        for (Personaje j : jugadores) {
-            for (int k = 0; k < 3; k++) {
-                j.agarrarCarta(mazoSinEpidemias[cartasRepartidas]);
-                cartasRepartidas++;
+    public int repartirManosIniciales(Carta[] mazoInicial, Personaje[] jugadores, MazoAuxiliarEvento mazoAuxiliarEvento) {
+        int cartasPorJugador;
+        if (jugadores.length == 2) {
+            cartasPorJugador = 4;
+        } else if (jugadores.length == 3) {
+            cartasPorJugador = 3;
+        } else {
+            cartasPorJugador = 2;
+        }
+
+        int indiceMazo = 0;
+        for (int i = 0; i < jugadores.length; i++) {
+            for (int c = 0; c < cartasPorJugador; c++) {
+                Carta cartaRepartida = mazoInicial[indiceMazo++];
+                jugadores[i].agarrarCarta(cartaRepartida);
+
+                if (mazoAuxiliarEvento != null
+                        && (cartaRepartida instanceof CartaEvento
+                        || "Evento".equalsIgnoreCase(cartaRepartida.obtenerTipo()))) {
+                    mazoAuxiliarEvento.agregarEvento(cartaRepartida, jugadores[i]);
+                }
             }
         }
-        return cartasRepartidas;
+        return indiceMazo;
     }
 
-    // Pasos 4 y 5: Ensamblar remanente con epidemias, barajar y cargar en FixedArrayStack
-    public void ensamblarYConvertirAStack(Carta[] mazoSinEpidemias, int cartasYaUsadas, int numEpidemias) {
-        int remanenteTamano = mazoSinEpidemias.length - cartasYaUsadas;
+    public void ensamblarYConvertirAStack(Carta[] mazoInicial, int cartasUsadas, int numEpidemias) {
+        int restantes = mazoInicial.length - cartasUsadas;
+        int totalFinal = restantes + numEpidemias;
+        this.mazo = new FixedArrayStack<>(totalFinal);
+
         CartaEpidemia[] epidemias = InfoCartas.crearCartasEpidemia(numEpidemias);
+        int baseSize = restantes / numEpidemias;
+        int extra = restantes % numEpidemias;
 
-        Carta[] remanenteConEpidemias = new Carta[remanenteTamano + numEpidemias];
-        int idx = 0;
+        Carta[][] pilas = new Carta[numEpidemias][];
+        int cursor = cartasUsadas;
 
-        // Copiar remanente no repartido
-        for (int i = cartasYaUsadas; i < mazoSinEpidemias.length; i++) {
-            remanenteConEpidemias[idx++] = mazoSinEpidemias[i];
+        for (int p = 0; p < numEpidemias; p++) {
+            int tamSubpila = baseSize + (p < extra ? 1 : 0);
+            Carta[] subpila = new Carta[tamSubpila + 1];
+
+            for (int k = 0; k < tamSubpila; k++) {
+                subpila[k] = mazoInicial[cursor++];
+            }
+            subpila[tamSubpila] = epidemias[p];
+            barajarArreglo(subpila);
+            pilas[p] = subpila;
         }
 
-        // Agregar cartas de epidemia
-        for (CartaEpidemia ep : epidemias) {
-            remanenteConEpidemias[idx++] = ep;
-        }
-
-        // Barajar el remanente final
-        barajarArreglo(remanenteConEpidemias);
-
-        // Guardar en la estructura FixedArrayStack
-        this.mazoStack = new FixedArrayStack<>(remanenteConEpidemias.length);
-        for (Carta c : remanenteConEpidemias) {
-            this.mazoStack.push(c);
+        for (int p = numEpidemias - 1; p >= 0; p--) {
+            for (int k = pilas[p].length - 1; k >= 0; k--) {
+                this.mazo.push(pilas[p][k]);
+            }
         }
     }
 
     public Carta robarCarta() {
-        if (mazoStack != null && !mazoStack.isEmpty()) {
-            return mazoStack.pop();
+        if (mazo.isEmpty()) {
+            return null;
         }
-        return null; // Mazo de jugador agotado
+        return mazo.pop();
     }
 
-    public int cartasRestantes() {
-        return (mazoStack != null) ? mazoStack.obtenerTamano() : 0;
-    }
 }

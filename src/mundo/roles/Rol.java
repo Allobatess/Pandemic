@@ -1,15 +1,19 @@
 package mundo.roles;
 
 import juego.LogicaJuego;
+import juego.mazo.MazoAuxiliarEvento;
+import juego.mazo.MazoInfeccion;
 import mundo.Ciudad;
 import mundo.Personaje;
 import mundo.cartas.Carta;
 import mundo.cartas.CartaCiudad;
+import mundo.cartas.CartaInfeccion;
+import mundo.cartas.CartaEvento;
 import java.util.Scanner;
 
 /**
  * Clase base que representa el rol de un jugador.
- * Define el menú estándar, las acciones básicas y los métodos hook para habilidades pasivas.
+ * Define el menú estándar, las acciones básicas, el uso de eventos y los métodos hook.
  */
 public class Rol {
 
@@ -79,6 +83,7 @@ public class Rol {
         System.out.println("  6. Mover entre centros de investigación (transCenterMove)");
         System.out.println("  7. Descubrir cura (descubrirCura)");
         System.out.println("  8. Compartir conocimiento (compartirConocimiento)");
+        System.out.println("  9. Jugar carta de evento (jugarEvento - no consume acción)");
     }
 
     protected int procesarOpcionBase(int opcion, Personaje personaje, LogicaJuego juego) {
@@ -102,6 +107,9 @@ public class Rol {
                 return ejecutarDescubrirCura(personaje, juego) ? 1 : 0;
             case 8:
                 return ejecutarCompartirConocimiento(personaje, juego) ? 1 : 0;
+            case 9:
+                jugarEvento(personaje, juego);
+                return 0;
             default:
                 System.out.println("Opción fuera de rango.");
                 return 0;
@@ -190,7 +198,7 @@ public class Rol {
                     + ciudadActual.obtenerNombre() + " (" + juego.obtenerCentrosConstruidos() + "/6).");
             return true;
         } else {
-            Ciudad origen = seleccionarCentroAReposicionar(personaje, juego);
+            Ciudad origen = seleccionarCentroAReposicionar(personaje, ciudadActual, juego);
             if (origen == null) {
                 return false;
             }
@@ -203,9 +211,13 @@ public class Rol {
     }
 
     protected Ciudad seleccionarCentroAReposicionar(Personaje personaje, LogicaJuego juego) {
+        return seleccionarCentroAReposicionar(personaje, personaje.obtenerCiudadActual(), juego);
+    }
+
+    protected Ciudad seleccionarCentroAReposicionar(Personaje personaje, Ciudad ciudadDestino, LogicaJuego juego) {
         Ciudad[] centros = juego.obtenerCiudadesConCentro();
         System.out.println("Ya existen 6 centros de investigación en el mapa. Elige cuál deseas mover a "
-                + personaje.obtenerCiudadActual().obtenerNombre() + ":");
+                + ciudadDestino.obtenerNombre() + ":");
         for (int i = 0; i < centros.length; i++) {
             System.out.println("  [" + i + "] " + centros[i].obtenerNombre());
         }
@@ -291,6 +303,234 @@ public class Rol {
         emisor.removerCartaPorIndice(indiceCarta);
         receptor.agarrarCarta(carta);
         System.out.println(receptor.obtenerNombre() + " recibió la carta " + carta.obtenerNombre() + ".");
+        return true;
+    }
+
+    // ==========================================
+    // GESTIÓN Y EJECUCIÓN DE CARTAS DE EVENTO
+    // ==========================================
+
+    public boolean jugarEvento(Personaje jugadorEnTurno, LogicaJuego juego) {
+        MazoAuxiliarEvento mazoEventos = juego.obtenerMazoAuxiliarEvento();
+
+        if (!mazoEventos.hayEventosDisponibles()) {
+            System.out.println("No hay cartas de Evento disponibles en manos de los jugadores.");
+            return false;
+        }
+
+        int totalEventos = mazoEventos.obtenerNumEventosDisponibles();
+        System.out.println("\nCartas de Evento disponibles:");
+        for (int i = 0; i < totalEventos; i++) {
+            CartaEvento evento = mazoEventos.obtenerCartaEvento(i);
+            System.out.println("  [" + i + "] " + evento.obtenerNombre()
+                    + " (en mano de " + mazoEventos.obtenerPortador(i).obtenerNombre() + "): "
+                    + evento.obtenerDescripcion());
+        }
+        System.out.print("Seleccione el índice de la carta de evento a jugar (o -1 para cancelar): ");
+
+        Scanner scanner = jugadorEnTurno.obtenerScanner();
+        int seleccion = leerEntero(scanner);
+        if (seleccion < 0 || seleccion >= totalEventos) {
+            System.out.println("Ejecución de evento cancelada.");
+            return false;
+        }
+
+        Carta cartaElegida = mazoEventos.obtenerCartaEvento(seleccion);
+        Personaje portador = mazoEventos.obtenerPortador(seleccion);
+
+        boolean ejecutado = resolverCartaEvento(cartaElegida, jugadorEnTurno, juego);
+        if (ejecutado) {
+            mazoEventos.eliminarEvento(seleccion);
+            System.out.println("Carta de evento '" + cartaElegida.obtenerNombre()
+                    + "' descartada de la mano de " + portador.obtenerNombre() + ".");
+            return true;
+        }
+
+        return false;
+    }
+
+    protected boolean resolverCartaEvento(Carta cartaEvento, Personaje jugadorEnTurno, LogicaJuego juego) {
+        String nombreEvento = cartaEvento.obtenerNombre();
+
+        switch (nombreEvento) {
+            case "Puente Aéreo":
+                return ejecutarPuenteAereo(jugadorEnTurno, juego);
+            case "Subvención del Gobierno":
+                return ejecutarSubvencionGobierno(jugadorEnTurno, juego);
+            case "Pronóstico":
+                return ejecutarPronostico(jugadorEnTurno, juego);
+            case "Población Resistente":
+                return ejecutarPoblacionResistente(jugadorEnTurno, juego);
+            case "Noche Tranquila":
+                return ejecutarUnaNocheTranquila(juego);
+            default:
+                System.out.println("El efecto de la carta de evento '" + nombreEvento + "' aún no está implementado.");
+                return false;
+        }
+    }
+
+    protected boolean ejecutarUnaNocheTranquila(LogicaJuego juego) {
+        System.out.println("\n--- EVENTO: UNA NOCHE TRANQUILA ---");
+        juego.activarNocheTranquila();
+        System.out.println("¡Una Noche Tranquila activada! Se omitirá la próxima fase de infección.");
+        return true;
+    }
+
+    protected boolean ejecutarPuenteAereo(Personaje jugadorEnTurno, LogicaJuego juego) {
+        Scanner scanner = jugadorEnTurno.obtenerScanner();
+        Personaje[] jugadores = juego.obtenerJugadores();
+
+        System.out.println("\n--- EVENTO: PUENTE AÉREO ---");
+        System.out.println("Seleccione el personaje que desea mover:");
+        for (int i = 0; i < jugadores.length; i++) {
+            System.out.println("  [" + i + "] " + jugadores[i].obtenerNombre()
+                    + " (actualmente en " + jugadores[i].obtenerCiudadActual().obtenerNombre() + ")");
+        }
+        System.out.print("Índice del personaje: ");
+
+        int idxPersonaje = leerEntero(scanner);
+        if (idxPersonaje < 0 || idxPersonaje >= jugadores.length) {
+            System.out.println("Índice de personaje inválido.");
+            return false;
+        }
+
+        Personaje peonObjetivo = jugadores[idxPersonaje];
+        System.out.print("Ingrese el nombre exacto de la ciudad destino: ");
+        String nombreDestino = scanner.nextLine().trim();
+        Ciudad destino = juego.buscarCiudad(nombreDestino);
+
+        if (destino == null) {
+            System.out.println("Ciudad no encontrada en el tablero.");
+            return false;
+        }
+
+        if (destino == peonObjetivo.obtenerCiudadActual()) {
+            System.out.println(peonObjetivo.obtenerNombre() + " ya se encuentra en " + destino.obtenerNombre() + ".");
+            return false;
+        }
+
+        juego.cambiarUbicacion(peonObjetivo, destino);
+        return true;
+    }
+
+    protected boolean ejecutarSubvencionGobierno(Personaje jugadorEnTurno, LogicaJuego juego) {
+        Scanner scanner = jugadorEnTurno.obtenerScanner();
+
+        System.out.println("\n--- EVENTO: SUBVENCIÓN DEL GOBIERNO ---");
+        System.out.print("Ingrese el nombre exacto de la ciudad donde desea construir el centro de investigación: ");
+        String nombreCiudad = scanner.nextLine().trim();
+        Ciudad destino = juego.buscarCiudad(nombreCiudad);
+
+        if (destino == null) {
+            System.out.println("Ciudad no encontrada en el tablero.");
+            return false;
+        }
+
+        if (destino.tenerCentroDeInvestigacion()) {
+            System.out.println(destino.obtenerNombre() + " ya cuenta con un centro de investigación.");
+            return false;
+        }
+
+        if (juego.puedeConstruirCentro()) {
+            juego.registrarCentroDeInvestigacion(destino);
+            System.out.println("¡Subvención del Gobierno! Se ha construido un centro de investigación en "
+                    + destino.obtenerNombre() + " (" + juego.obtenerCentrosConstruidos() + "/6).");
+            return true;
+        } else {
+            Ciudad origen = seleccionarCentroAReposicionar(jugadorEnTurno, destino, juego);
+            if (origen == null) {
+                return false;
+            }
+            juego.moverCentroDeInvestigacion(origen, destino);
+            System.out.println("¡Subvención del Gobierno! Centro de investigación reposicionado de "
+                    + origen.obtenerNombre() + " a " + destino.obtenerNombre() + " (6/6).");
+            return true;
+        }
+    }
+
+    protected boolean ejecutarPronostico(Personaje jugadorEnTurno, LogicaJuego juego) {
+        MazoInfeccion mazoInfeccion = juego.obtenerMazoInfeccion();
+        CartaInfeccion[] superiores = mazoInfeccion.extraerSuperiores(6);
+
+        if (superiores.length == 0) {
+            System.out.println("El mazo de infección está vacío.");
+            return false;
+        }
+
+        System.out.println("\n--- EVENTO: PRONÓSTICO ---");
+        System.out.println("Primeras " + superiores.length + " cartas del mazo de infección:");
+        for (int i = 0; i < superiores.length; i++) {
+            String etiqueta = (i == 0) ? " (tope actual)" : "";
+            System.out.println("  [" + i + "] " + superiores[i].obtenerNombre() + etiqueta);
+        }
+
+        if (superiores.length == 1) {
+            mazoInfeccion.devolverAlTope(superiores);
+            System.out.println("Solo quedaba 1 carta; se devolvió al tope del mazo.");
+            return true;
+        }
+
+        Scanner scanner = jugadorEnTurno.obtenerScanner();
+        CartaInfeccion[] reordenadas = new CartaInfeccion[superiores.length];
+        boolean[] usadas = new boolean[superiores.length];
+
+        System.out.println("Indique el nuevo orden desde el tope del mazo (1 = próxima en robarse):");
+        for (int pos = 0; pos < superiores.length; pos++) {
+            System.out.print("  Posición " + (pos + 1)
+                    + (pos == 0 ? " (tope)" : "")
+                    + " - índice de carta (o -1 para cancelar): ");
+            int idx = leerEntero(scanner);
+
+            if (idx == -1) {
+                mazoInfeccion.devolverAlTope(superiores);
+                System.out.println("Pronóstico cancelado. Se restauró el orden original del mazo.");
+                return false;
+            }
+
+            if (idx < 0 || idx >= superiores.length || usadas[idx]) {
+                System.out.println("Índice inválido o carta ya asignada. Intente nuevamente.");
+                pos--;
+                continue;
+            }
+
+            usadas[idx] = true;
+            reordenadas[pos] = superiores[idx];
+        }
+
+        mazoInfeccion.devolverAlTope(reordenadas);
+        System.out.println("¡Pronóstico aplicado! Nuevo orden en el tope del mazo de infección:");
+        for (int i = 0; i < reordenadas.length; i++) {
+            System.out.println("  " + (i + 1) + ". " + reordenadas[i].obtenerNombre());
+        }
+        return true;
+    }
+
+    protected boolean ejecutarPoblacionResistente(Personaje jugadorEnTurno, LogicaJuego juego) {
+        MazoInfeccion mazoInfeccion = juego.obtenerMazoInfeccion();
+        int totalDescartes = mazoInfeccion.obtenerNumDescartes();
+
+        if (totalDescartes == 0) {
+            System.out.println("La pila de descartes de infección está vacía.");
+            return false;
+        }
+
+        System.out.println("\n--- EVENTO: POBLACIÓN RESISTENTE ---");
+        System.out.println("Cartas en la pila de descartes de infección:");
+        for (int i = 0; i < totalDescartes; i++) {
+            System.out.println("  [" + i + "] " + mazoInfeccion.obtenerDescarte(i).obtenerNombre());
+        }
+        System.out.print("Seleccione el índice de la carta a retirar de la partida (o -1 para cancelar): ");
+
+        Scanner scanner = jugadorEnTurno.obtenerScanner();
+        int idx = leerEntero(scanner);
+        if (idx < 0 || idx >= totalDescartes) {
+            System.out.println("Ejecución de Población Resistente cancelada.");
+            return false;
+        }
+
+        CartaInfeccion retirada = mazoInfeccion.retirarDeDescartes(idx);
+        System.out.println("¡Población Resistente! La carta '" + retirada.obtenerNombre()
+                + "' ha sido retirada definitivamente de la partida.");
         return true;
     }
 

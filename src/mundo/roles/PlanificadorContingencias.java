@@ -1,11 +1,119 @@
 package mundo.roles;
+import mundo.cartas.CartaEvento;
+import juego.LogicaJuego;
+import juego.mazo.MazoAuxiliarEvento;
+import mundo.Personaje;
+import mundo.cartas.Carta;
+import java.util.Scanner;
 
 public class PlanificadorContingencias extends Rol {
 
+    private CartaEvento eventoAlmacenado;
+
     public PlanificadorContingencias() {
-        super(
-            "Planificador de Contingencias",
-            "Como acción, puede tomar una carta de Evento de la pila de descartes y guardarla en su carta de rol (máximo 1 y no cuenta para el límite de mano). Al jugarla, la carta se retira del juego."
-        );
+        super("Planificador de Contingencias",
+                "Como acción, puede tomar una carta de Evento descartada y guardarla en su carta de rol (máx. 1). Al jugarla, se retira del juego.");
+        this.eventoAlmacenado = null;
+    }
+
+    @Override
+    protected void imprimirOpcionesBase() {
+        super.imprimirOpcionesBase();
+        System.out.println("  10. Recuperar carta de evento descartada (habilidad de rol)");
+    }
+
+    @Override
+    protected int procesarOpcionBase(int opcion, Personaje personaje, LogicaJuego juego) {
+        if (opcion == 10) {
+            return ejecutarRecuperarEvento(personaje, juego) ? 1 : 0;
+        }
+        return super.procesarOpcionBase(opcion, personaje, juego);
+    }
+
+    @Override
+    public boolean jugarEvento(Personaje jugadorEnTurno, LogicaJuego juego) {
+        if (eventoAlmacenado == null) {
+            return super.jugarEvento(jugadorEnTurno, juego);
+        }
+
+        MazoAuxiliarEvento mazoEventos = juego.obtenerMazoAuxiliarEvento();
+        int totalEnMano = mazoEventos.obtenerNumEventosDisponibles();
+
+        System.out.println("\nCartas de Evento disponibles:");
+        for (int i = 0; i < totalEnMano; i++) {
+            CartaEvento evento = mazoEventos.obtenerCartaEvento(i);
+            System.out.println("  [" + i + "] " + evento.obtenerNombre()
+                    + " (en mano de " + mazoEventos.obtenerPortador(i).obtenerNombre() + "): "
+                    + evento.obtenerDescripcion());
+        }
+        System.out.println("  [" + totalEnMano + "] " + eventoAlmacenado.obtenerNombre()
+                + " (almacenada en " + nombre + "): "
+                + eventoAlmacenado.obtenerDescripcion());
+        System.out.print("Seleccione el índice de la carta de evento a jugar (o -1 para cancelar): ");
+
+        Scanner scanner = jugadorEnTurno.obtenerScanner();
+        int seleccion = leerEntero(scanner);
+        if (seleccion < 0 || seleccion > totalEnMano) {
+            System.out.println("Ejecución de evento cancelada.");
+            return false;
+        }
+
+        if (seleccion == totalEnMano) {
+            boolean ejecutado = resolverCartaEvento(eventoAlmacenado, jugadorEnTurno, juego);
+            if (ejecutado) {
+                System.out.println("Carta de evento '" + eventoAlmacenado.obtenerNombre()
+                        + "' retirada definitivamente de la partida.");
+                eventoAlmacenado = null;
+                return true;
+            }
+            return false;
+        }
+
+        Carta cartaElegida = mazoEventos.obtenerCartaEvento(seleccion);
+        Personaje portador = mazoEventos.obtenerPortador(seleccion);
+
+        boolean ejecutado = resolverCartaEvento(cartaElegida, jugadorEnTurno, juego);
+        if (ejecutado) {
+            mazoEventos.eliminarEvento(seleccion);
+            System.out.println("Carta de evento '" + cartaElegida.obtenerNombre()
+                    + "' descartada de la mano de " + portador.obtenerNombre() + ".");
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean ejecutarRecuperarEvento(Personaje personaje, LogicaJuego juego) {
+        if (eventoAlmacenado != null) {
+            System.out.println("Ya tienes un evento almacenado (" + eventoAlmacenado.obtenerNombre()
+                    + "). Juégalo antes de recuperar otro.");
+            return false;
+        }
+
+        MazoAuxiliarEvento mazoEventos = juego.obtenerMazoAuxiliarEvento();
+        int totalDescartados = mazoEventos.obtenerNumEventosDescartados();
+
+        if (totalDescartados == 0) {
+            System.out.println("No hay cartas de evento descartadas disponibles para recuperar.");
+            return false;
+        }
+
+        System.out.println("\nCartas de Evento en el descarte:");
+        for (int i = 0; i < totalDescartados; i++) {
+            System.out.println("  [" + i + "] " + mazoEventos.obtenerEventoDescartado(i).obtenerNombre());
+        }
+        System.out.print("Seleccione el índice del evento a recuperar (o -1 para cancelar): ");
+
+        Scanner scanner = personaje.obtenerScanner();
+        int idx = leerEntero(scanner);
+        if (idx < 0 || idx >= totalDescartados) {
+            System.out.println("Recuperación de evento cancelada.");
+            return false;
+        }
+
+        eventoAlmacenado = mazoEventos.retirarEventoDescartado(idx);
+        System.out.println("¡Éxito! Has almacenado '" + eventoAlmacenado.obtenerNombre()
+                + "' en tu carta de rol.");
+        return true;
     }
 }

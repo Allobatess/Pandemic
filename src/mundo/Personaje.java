@@ -1,31 +1,33 @@
 package mundo;
 
 import juego.LogicaJuego;
+import juego.mazo.MazoAuxiliarEvento;
 import mundo.cartas.Carta;
 import mundo.cartas.CartaCiudad;
+import mundo.cartas.CartaEvento;
 import mundo.roles.Rol;
 import java.util.Scanner;
 
-/**
- * Representa al jugador en la partida. Administra su rol, posición, mano (FixedArray de 8)
- * y el control de sus 4 acciones por turno.
- */
 public class Personaje {
 
     private final Rol rol;
     private Ciudad ciudadActual;
     private final Carta[] mano;
     private int numCartas;
-    private int accionesDisponibles;
+    private static final int LIMITE_MANO = 7;
     private final Scanner scanner;
+    private MazoAuxiliarEvento mazoAuxiliarEvento;
 
     public Personaje(Rol rol, Ciudad ciudadInicial) {
         this.rol = rol;
         this.ciudadActual = ciudadInicial;
-        this.mano = new Carta[8]; // FixedArray de capacidad 8
+        this.mano = new Carta[LIMITE_MANO + 1];
         this.numCartas = 0;
-        this.accionesDisponibles = 0;
         this.scanner = new Scanner(System.in);
+    }
+
+    public void establecerMazoAuxiliarEvento(MazoAuxiliarEvento mazoAuxiliarEvento) {
+        this.mazoAuxiliarEvento = mazoAuxiliarEvento;
     }
 
     public String obtenerNombre() {
@@ -36,16 +38,16 @@ public class Personaje {
         return rol;
     }
 
-    public Scanner obtenerScanner() {
-        return scanner;
-    }
-
     public Ciudad obtenerCiudadActual() {
         return ciudadActual;
     }
 
     public void establecerCiudadActual(Ciudad ciudadActual) {
         this.ciudadActual = ciudadActual;
+    }
+
+    public Scanner obtenerScanner() {
+        return scanner;
     }
 
     public Carta[] obtenerMano() {
@@ -56,109 +58,96 @@ public class Personaje {
         return numCartas;
     }
 
-    // ==========================================
-    // GESTIÓN DE LA MANO
-    // ==========================================
-
-    public void agarrarCarta(Carta nuevaCarta) {
-        if (nuevaCarta == null) return;
-        mano[numCartas] = nuevaCarta;
-        numCartas++;
-
-        while (numCartas > 7) {
-            descartarCarta();
+    public void agarrarCarta(Carta carta) {
+        if (carta == null) {
+            return;
         }
-    }
+        mano[numCartas++] = carta;
 
-    public void descartarCarta() {
-        System.out.println("\n------------------------------------------");
-        System.out.println("¡Mano llena para " + obtenerNombre() + "! (Límite: 7 cartas, tienes " + numCartas + ")");
-        imprimirMano();
-
-        int indiceAEliminar = -1;
-        while (indiceAEliminar < 0 || indiceAEliminar >= numCartas) {
-            System.out.print("Ingrese el índice de la carta que desea descartar (0 a " + (numCartas - 1) + "): ");
+        while (numCartas > LIMITE_MANO) {
+            System.out.println("\n" + obtenerNombre() + " supera el límite de " + LIMITE_MANO + " cartas.");
+            imprimirMano();
+            System.out.print("Elige el índice de la carta a descartar: ");
             if (scanner.hasNextInt()) {
-                indiceAEliminar = scanner.nextInt();
+                int idx = scanner.nextInt();
                 scanner.nextLine();
+                if (idx >= 0 && idx < numCartas) {
+                    System.out.println("Carta descartada: " + mano[idx].obtenerNombre());
+                    removerCartaPorIndice(idx);
+                } else {
+                    System.out.println("Índice fuera de rango.");
+                }
             } else {
                 scanner.nextLine();
+                System.out.println("Entrada inválida.");
             }
         }
-
-        System.out.println("Descartaste: " + mano[indiceAEliminar].obtenerNombre());
-        removerCartaPorIndice(indiceAEliminar);
     }
 
     public void removerCartaPorIndice(int indice) {
-        if (indice >= 0 && indice < numCartas) {
-            for (int i = indice; i < numCartas - 1; i++) {
-                mano[i] = mano[i + 1];
-            }
-            mano[numCartas - 1] = null;
-            numCartas--;
+        if (indice < 0 || indice >= numCartas) {
+            return;
+        }
+        Carta cartaRemovida = mano[indice];
+
+        for (int i = indice; i < numCartas - 1; i++) {
+            mano[i] = mano[i + 1];
+        }
+        mano[--numCartas] = null;
+
+        if (mazoAuxiliarEvento != null
+                && (cartaRemovida instanceof CartaEvento
+                || "Evento".equalsIgnoreCase(cartaRemovida.obtenerTipo()))) {
+            mazoAuxiliarEvento.eliminarEvento(cartaRemovida);
         }
     }
 
     public boolean descartarCartasDeCiudad(String color, int cantidad) {
-        int contador = 0;
-        for (int i = 0; i < numCartas; i++) {
+        int[] indices = new int[cantidad];
+        int encontradas = 0;
+
+        for (int i = 0; i < numCartas && encontradas < cantidad; i++) {
             if (mano[i] instanceof CartaCiudad) {
                 CartaCiudad cc = (CartaCiudad) mano[i];
                 if (cc.obtenerCiudad().obtenerColor().equalsIgnoreCase(color)) {
-                    contador++;
+                    indices[encontradas++] = i;
                 }
             }
         }
 
-        if (contador < cantidad) {
+        if (encontradas < cantidad) {
             return false;
         }
 
-        int eliminadas = 0;
-        for (int i = numCartas - 1; i >= 0 && eliminadas < cantidad; i--) {
-            if (mano[i] instanceof CartaCiudad) {
-                CartaCiudad cc = (CartaCiudad) mano[i];
-                if (cc.obtenerCiudad().obtenerColor().equalsIgnoreCase(color)) {
-                    System.out.println("Carta descartada para cura: " + mano[i].obtenerNombre());
-                    removerCartaPorIndice(i);
-                    eliminadas++;
-                }
-            }
+        for (int i = cantidad - 1; i >= 0; i--) {
+            removerCartaPorIndice(indices[i]);
         }
         return true;
     }
 
     public void imprimirMano() {
-        System.out.println("Mano actual de " + obtenerNombre() + " (" + numCartas + "/7):");
+        System.out.println("Mano de " + obtenerNombre() + " (" + numCartas + "/" + LIMITE_MANO + "):");
+        if (numCartas == 0) {
+            System.out.println("  (Sin cartas)");
+            return;
+        }
         for (int i = 0; i < numCartas; i++) {
-            System.out.println("  [" + i + "] " + mano[i].obtenerNombre() + " (" + mano[i].obtenerTipo() + ")");
+            System.out.println("  [" + i + "] " + mano[i].obtenerNombre() + " [" + mano[i].obtenerTipo() + "]");
         }
     }
 
-    // ==========================================
-    // EJECUCIÓN INTERACTIVA DEL TURNO
-    // ==========================================
-
     public void ejecutarAccion(LogicaJuego juego) {
-        this.accionesDisponibles = 4;
-
-        while (accionesDisponibles > 0) {
-            System.out.println("\n------------------------------------------");
-            System.out.println("Ubicación actual: " + ciudadActual.obtenerNombre()
-                    + " (Cubos de infección: " + ciudadActual.obtenerCubosDeInfeccion() + ")");
-            System.out.println("Acciones restantes en este turno: " + accionesDisponibles);
+        int accionesDisponibles = 4;
+        while (accionesDisponibles > 0 && !juego.hayVictoria()) {
+            System.out.println("\n--- Acciones restantes: " + accionesDisponibles + " | Ubicación: "
+                    + ciudadActual.obtenerNombre() + " ---");
             imprimirMano();
 
             int resultado = rol.ejecutarMenu(this, juego);
-            if (juego.hayVictoria()) {
-                return;
-            }
             if (resultado == -1) {
-                accionesDisponibles = 0;
-                return;
-            } else if (resultado == 1) {
-                accionesDisponibles--;
+                break;
+            } else if (resultado > 0) {
+                accionesDisponibles -= resultado;
             }
         }
     }

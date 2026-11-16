@@ -3,22 +3,27 @@ package juego;
 import datosObjetos.Ciudades;
 import datosObjetos.Roles;
 import estructurasDatos.SinglyLinkedListQueue;
+import estructurasDatos.AVL;
+import juego.mazo.MazoAuxiliarEvento;
 import juego.mazo.MazoInfeccion;
 import juego.mazo.MazoJugador;
 import mundo.Ciudad;
 import mundo.Personaje;
 import mundo.cartas.Carta;
+import mundo.cartas.CartaEvento;
 import mundo.cartas.CartaInfeccion;
 import mundo.roles.Rol;
 
 public class LogicaJuego {
 
     private final Ciudad[] tableroCiudades;
+    private final AVL<String, Ciudad> directorioCiudades;
     private final Personaje[] jugadores;
     private int indiceJugadorActual;
 
     private final MazoInfeccion mazoInfeccion;
     private final MazoJugador mazoJugador;
+    private final MazoAuxiliarEvento mazoAuxiliarEvento;
 
     private int tasaInfeccion;
     private final Ciudad atlanta;
@@ -26,12 +31,13 @@ public class LogicaJuego {
     private static final int MAX_CENTROS = 6;
     private int centrosConstruidos;
 
-    //Marcador de brotes: avanza una casilla por brote. Con MAX_BROTES los jugadores pierden.
+    // Marcador de brotes: avanza una casilla por brote. Con MAX_BROTES los jugadores pierden.
     private static final int MAX_BROTES = 8;
     private int contadorBrotes;
 
     public static final String[] COLORES = {"Azul", "Amarillo", "Negro", "Rojo"};
     private final boolean[] curas;
+    private boolean nocheTranquila;
     private boolean victoriaAlcanzada;
 
     public LogicaJuego() {
@@ -45,12 +51,17 @@ public class LogicaJuego {
         }
 
         this.tableroCiudades = Ciudades.crearCiudades();
+        this.directorioCiudades = new AVL<>();
+        for (Ciudad ciudad : this.tableroCiudades) {
+            this.directorioCiudades.insertar(ciudad.obtenerNombre().trim().toLowerCase(), ciudad);
+        }
         this.atlanta = buscarCiudad("Atlanta");
         this.centrosConstruidos = 0;
         registrarCentroDeInvestigacion(this.atlanta);
 
         this.curas = new boolean[COLORES.length];
         this.victoriaAlcanzada = false;
+        this.mazoAuxiliarEvento = new MazoAuxiliarEvento();
 
         // Barajar roles y asignar sin repetición
         for (int i = rolesDisponibles.length - 1; i > 0; i--) {
@@ -63,6 +74,7 @@ public class LogicaJuego {
         this.jugadores = new Personaje[numJugadores];
         for (int i = 0; i < numJugadores; i++) {
             this.jugadores[i] = new Personaje(rolesDisponibles[i], atlanta);
+            this.jugadores[i].establecerMazoAuxiliarEvento(this.mazoAuxiliarEvento);
             atlanta.agregarPersonaje(this.jugadores[i]);
             System.out.println("Jugador " + (i + 1) + " -> " + this.jugadores[i].obtenerNombre()
                     + ": " + this.jugadores[i].obtenerRol().obtenerDescripcion());
@@ -75,11 +87,12 @@ public class LogicaJuego {
         this.mazoJugador = new MazoJugador();
         Carta[] mazoInicial = mazoJugador.crearMazoInicialSinEpidemias(tableroCiudades);
         mazoJugador.barajarArreglo(mazoInicial);
-        int cartasUsadas = mazoJugador.repartirManosIniciales(mazoInicial, jugadores);
+        int cartasUsadas = mazoJugador.repartirManosIniciales(mazoInicial, jugadores, mazoAuxiliarEvento);
         mazoJugador.ensamblarYConvertirAStack(mazoInicial, cartasUsadas, 4);
 
         this.tasaInfeccion = 2;
         this.contadorBrotes = 0;
+        this.nocheTranquila = false;
     }
 
     // ==========================================
@@ -130,12 +143,10 @@ public class LogicaJuego {
     // ==========================================
 
     public Ciudad buscarCiudad(String nombre) {
-        for (Ciudad c : tableroCiudades) {
-            if (c.obtenerNombre().equalsIgnoreCase(nombre)) {
-                return c;
-            }
+        if (nombre == null) {
+            return null;
         }
-        return null;
+        return directorioCiudades.buscar(nombre.trim().toLowerCase());
     }
 
     public void cambiarUbicacion(Personaje personaje, Ciudad ciudadDestino) {
@@ -205,9 +216,18 @@ public class LogicaJuego {
     // ==========================================
     // DINÁMICA DEL TURNO, INFECCIÓN Y BROTES
     // ==========================================
+    public void activarNocheTranquila() {
+        this.nocheTranquila = true;
+    }
 
     public void ejecutarInfeccionAutomatica() {
         System.out.println("\n--- FASE DE INFECCIÓN AUTOMÁTICA ---");
+        if (nocheTranquila) {
+            System.out.println("--- FASE SALTADA POR NOCHE TRANQUILA ---");
+            nocheTranquila = false;
+            return;
+        }
+
         for (int i = 0; i < this.tasaInfeccion; i++) {
             CartaInfeccion robada = this.mazoInfeccion.robarCarta();
             if (robada != null) {
@@ -251,10 +271,6 @@ public class LogicaJuego {
             System.out.println("\n*** ¡BROTE en " + ciudad.obtenerNombre() + "! ***");
             imprimirMarcadorBrotes();
 
-            if (hayDerrotaPorBrotes()) {
-                return;
-            }
-            
             for (Ciudad vecina : ciudad.obtenerVecinos()) {
                 if (contiene(yaExplotaron, numExplotadas, vecina)) {
                     continue;
@@ -301,11 +317,6 @@ public class LogicaJuego {
         return MAX_BROTES;
     }
 
-    /**
-     * Muestra el marcador de brotes. La casilla actual va entre corchetes.
-     * Ejemplo con 2 brotes:
-     *   Marcador de brotes:  0  1 [2] 3  4  5  6  7  8  (8 = derrota)
-     */
     public void imprimirMarcadorBrotes() {
         StringBuilder marcador = new StringBuilder("Marcador de brotes:  ");
         int casillaActual = Math.min(contadorBrotes, MAX_BROTES);
@@ -346,6 +357,9 @@ public class LogicaJuego {
                         return false;
                     }
                 } else {
+                    if (robada instanceof CartaEvento || "Evento".equalsIgnoreCase(robada.obtenerTipo())) {
+                        mazoAuxiliarEvento.agregarEvento(robada, jugadorActual);
+                    }
                     jugadorActual.agarrarCarta(robada);
                 }
             } else {
@@ -384,11 +398,14 @@ public class LogicaJuego {
         System.out.println("\n==========================================");
         System.out.println("              MAPA ACTUAL                 ");
         imprimirMarcadorBrotes();
-        System.out.println(" | Tasa de infección: " + tasaInfeccion
-                        + " | Centros: " + centrosConstruidos + "/" + MAX_CENTROS);
+        System.out.println("Tasa de infección: " + tasaInfeccion
+                + " | Centros: " + centrosConstruidos + "/" + MAX_CENTROS);
         System.out.println("==========================================");
 
-        for (Ciudad ciudad : this.tableroCiudades) {
+        Ciudad[] ciudadesOrdenadas = new Ciudad[directorioCiudades.obtenerTamano()];
+        directorioCiudades.inOrder(ciudadesOrdenadas);
+
+        for (Ciudad ciudad : ciudadesOrdenadas) {
             int cubos = ciudad.obtenerCubosDeInfeccion();
             String centro = ciudad.tenerCentroDeInvestigacion() ? " [Centro de Inv.]" : "";
 
@@ -413,9 +430,18 @@ public class LogicaJuego {
             System.out.println("2. Ciudad infectada desde mazo de descarte de infección: "
                     + ciudadEpidemia.obtenerNombre() + " (3 cubos).");
             infectarCiudad(ciudadEpidemia, 3);
+            mazoInfeccion.agregarADescartes(robadaDescarte);
         } else {
             System.out.println("2. La pila de descartes de infección estaba vacía.");
         }
+
+        int cartasRecicladas = mazoInfeccion.reciclarDescartesAlMazo();
+        System.out.println("3. Intensificar: Se barajaron " + cartasRecicladas
+                + " carta(s) del descarte y se colocaron sobre el mazo de infección.");
+    }
+
+    public MazoInfeccion obtenerMazoInfeccion() {
+        return mazoInfeccion;
     }
 
     public Ciudad[] obtenerTableroCiudades() {
@@ -428,5 +454,9 @@ public class LogicaJuego {
 
     public int obtenerTasaInfeccion() {
         return tasaInfeccion;
+    }
+
+    public MazoAuxiliarEvento obtenerMazoAuxiliarEvento() {
+        return mazoAuxiliarEvento;
     }
 }
