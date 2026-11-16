@@ -27,7 +27,7 @@ Meanwhile, the compiled output files will be generated in the `bin` folder by de
 
 Para ejecutar el código abre la consola de tu equipo en la ruta ~/Pandemic-main.
 Allí, ejecuta:
-1. "javac -encoding UTF-8 -d bin src\estructurasDatos\*.java src\mundo\*.java src\mundo\cartas\*.java src\mundo\roles\*.java src\datosObjetos\*.java src\juego\mazo\*.java src\juego\*.java" 
+1. "javac -encoding UTF-8 -d bin src/estructurasDatos/*.java src/mundo/*.java src/mundo/cartas/*.java src/mundo/roles/*.java src/datosObjetos/*.java src/juego/mazo/*.java src/juego/*.java"
 2. "java -cp bin juego.Main".
 
 Con ello se mostrará el menú interactivo para empezar a jugar.
