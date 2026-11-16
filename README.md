@@ -27,7 +27,7 @@ Allí, ejecuta:
 
 1. Para limpiar y compilar todos los paquetes desde la carpeta raíz del proyecto:
 ```cmd
-if exist bin rmdir /s /q bin && mkdir bin && javac -encoding UTF-8 -d bin src\estructurasDatos\*.java src\datosObjetos\*.java src\mundo\*.java src\mundo\cartas\*.java src\mundo\roles\*.java src\juego\mazo\*.java src\juego\*.java
+javac -encoding UTF-8 -d bin src\estructurasDatos\*.java src\datosObjetos\*.java src\mundo\*.java src\mundo\cartas\*.java src\mundo\roles\*.java src\juego\mazo\*.java src\juego\*.java
 ``` 
 
 2. Para activar UTF-8 en la consola y ejecutar el juego:
